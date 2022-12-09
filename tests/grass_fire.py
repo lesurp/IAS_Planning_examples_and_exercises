@@ -2,7 +2,7 @@ import unittest
 from collections import defaultdict
 from math import inf
 
-from grass_fire import Graph
+from grass_fire import GrassFireGraph
 
 
 class TestGraph(unittest.TestCase):

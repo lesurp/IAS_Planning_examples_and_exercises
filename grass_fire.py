@@ -1,28 +1,34 @@
 from math import inf
-from typing import Optional, Tuple, List
+from typing import Optional, List
+from graph import Graph
 
 
-class Node:
-    def __init__(self, x: int, y: int, cost: float) -> None:
+class GrassFireNode:
+    def __init__(self, x: int, y: int, cost_to_go: float) -> None:
         self.cost: Optional[float] = None
-        self.cost_to_go = cost
+        self.cost_to_go = cost_to_go
         self.x = x
         self.y = y
 
 
-class Graph:
+class GrassFireGraph(Graph[GrassFireNode]):
     def __init__(self, max_x: int, max_y: int, cost_map) -> None:
-        self._max_x = max_x
-        self._max_y = max_y
-        self._nodes = []
+        super().__init__(max_x, max_y)
         for z in range(max_x * max_y):
             x, y = self._unflatten(z)
-            self._nodes.append(Node(x, y, cost_map[(x, y)]))
+            self._nodes.append(GrassFireNode(x, y, cost_map[(x, y)]))
 
-    def is_in(self, x: int, y: int) -> bool:
-        return 0 <= x < self._max_x and 0 <= y < self._max_y
+    ### Impl
+    def compute_path(self, xs: int, ys: int, xf: int, yf: int) -> List[GrassFireNode]:
+        self.initialize_costs(xs, ys)
+        return self.path_to(xf, yf)
 
-    def neighbors(self, node: Node) -> List[Node]:
+    def reset_costs(self):
+        for n in self._nodes:
+            n.cost = None
+
+    ### GrassFire specific
+    def neighbors(self, node: GrassFireNode) -> List[GrassFireNode]:
         neighbors = []
         for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
             x = node.x + dx
@@ -33,10 +39,6 @@ class Graph:
             if n.cost_to_go < inf:
                 neighbors.append(n)
         return neighbors
-
-    def reset_costs(self):
-        for n in self._nodes:
-            n.cost = None
 
     def initialize_costs(self, xs: int, ys: int):
         self.reset_costs()
@@ -56,7 +58,7 @@ class Graph:
                 to_add.append(next_n)
             nodes += to_add
 
-    def path_to(self, xf: int, yf: int) -> List[Node]:
+    def path_to(self, xf: int, yf: int) -> List[GrassFireNode]:
         nf = self.node(xf, yf)
         if nf.cost is None:
             return []
@@ -70,41 +72,37 @@ class Graph:
         path.reverse()
         return path
 
-    # Helper functions
-    def _flatten(self, x: int, y: int) -> int:
-        return y * self._max_x + x
-
-    def _unflatten(self, z: int) -> Tuple[int, int]:
-        x = z % self._max_x
-        y = (z - x) // self._max_x
-        return (x, y)
-
-    def _generic_str(self, padding, fn) -> str:
-        out = ""
-        for y in range(self._max_y):
-            out += "".join(
-                [f"{fn(self.node(x, y)):>{padding}}" for x in range(0, self._max_x)]
-            )[1:]
-            out += "\n"
-        return out[0:-1]
-
-    def cost_to_go_str(self) -> str:
-        return self._generic_str(
-            2,
-            lambda node: str(int(round(node.cost_to_go)))
-            if node.cost_to_go < inf
-            else "X",
-        )
-
     def total_cost_str(self) -> str:
         return self._generic_str(
             5, lambda node: node.cost if node.cost is not None else "?"
         )
 
-    def path_str(self, path) -> str:
-        return self._generic_str(
-            5, lambda node: path.index(node) if node in path else "X"
-        )
 
-    def node(self, x: int, y: int) -> Node:
-        return self._nodes[self._flatten(x, y)]
+if __name__ == "__main__":
+    from collections import defaultdict
+
+    # nodes will, by default, have a cost-to-go of 1
+    cost_map = defaultdict(lambda: 1.0)
+
+    # assuming our grid goes from [0;max_x[ * [0;max_y[
+    max_x = 10
+    max_y = 5
+
+    # and adding some obstacles to make our problem less trivial
+    for x in range(3, 9):
+        for y in range(3):
+            cost_map[(x, y)] = inf
+
+    g = GrassFireGraph(max_x, max_y, cost_map)
+    print("Node cost map:")
+    print(g.cost_to_go_str())
+
+    xs, ys = (1, 2)
+    g.initialize_costs(xs, ys)
+    print(f"Total cost-to-go map, initial point at ({xs}, {ys})")
+    print(g.total_cost_str())
+
+    xf, yf = (9, 0)
+    path = g.path_to(xf, yf)
+    print(f"Path from initial point ({xs}, {ys}) to goal point ({xf}, {yf})")
+    print(g.path_str(path))
