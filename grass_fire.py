@@ -1,9 +1,9 @@
 from math import inf
 from typing import Optional, List
-from graph import Graph
+from graph import Graph, Node
 
 
-class GrassFireNode:
+class GrassFireNode(Node):
     def __init__(self, x: int, y: int, cost_to_go: float) -> None:
         self.cost: Optional[float] = None
         self.cost_to_go = cost_to_go
