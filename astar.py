@@ -33,19 +33,24 @@ class AstarHeuristic(ABC):
         pass
 
 
-# TODO
 class Norm1AstarHeuristic(AstarHeuristic):
-    pass
+    def __call__(self, xs: int, ys: int, xf: int, yf: int) -> float:
+        return abs(xs - xf) + abs(ys - yf)
 
 
-# TODO
 class Norm2AstarHeuristic(AstarHeuristic):
-    pass
+    def __call__(self, xs: int, ys: int, xf: int, yf: int) -> float:
+        return ((xs - xf) ** 2 + (ys - yf) ** 2) ** 0.5
 
 
-# TODO
 class WeightedAstarHeuristic(AstarHeuristic):
-    pass
+    def __init__(self, eps: float, base_h: AstarHeuristic) -> None:
+        super().__init__()
+        self.h = base_h
+        self.eps = eps
+
+    def __call__(self, xs: int, ys: int, xf: int, yf: int) -> float:
+        return self.eps * self.h(xs, ys, xf, yf)
 
 
 class AstarGraph(Graph[AstarNode]):
@@ -56,9 +61,84 @@ class AstarGraph(Graph[AstarNode]):
             x, y = self._unflatten(z)
             self._nodes.append(AstarNode(x, y, cost_map[(x, y)]))
 
-    # TODO
     def compute_path(self, xs: int, ys: int, xf: int, yf: int) -> List[AstarNode]:
-        pass
+        self.reset_nodes()
+        # In python 3, there is no heap per se, but one can use a normal list
+        # and then use the functions defined in the heapq package to maintain the heap invariants
+        start = self.node(xs, ys)
+        start.g = 0
+        start.h = self.h(
+            xs, ys, xf, yf
+        )  # actually useless because the value is never read
+        heap = [start]
+
+        max_iter = 1000000
+        print_period = 1000
+        for n in range(max_iter):
+            if n % print_period == 0:
+                debug(f"Iteration {n}/{max_iter}")
+
+            try:
+                node_to_explore = heapq.heappop(heap)
+            except IndexError:
+                warning(
+                    f"No path exists from start ({xs}, {ys}) to goal ({xf}, {yf}) after {n+1} iterations"
+                )
+                return []
+
+            x = node_to_explore.x
+            y = node_to_explore.y
+
+            # Optimal graph search waits until we explore the destination,
+            # NOT until we add it to our heap. Otherwise we might be missing
+            # a shorter path (which might be preferable actually!)
+            if x == xf and y == yf:
+                info(
+                    f"Found path from start ({xs}, {ys}) to goal ({xf}, {yf}) after {n+1} iterations and {n+1+len(heap)} nodes added"
+                )
+                return self.collect_path(node_to_explore)
+
+            # We consider here an 8-connected grid, because why not :)
+            for (dx, dy) in itertools.product([-1, 0, 1], [-1, 0, 1]):
+                next_node = self.try_node(x + dx, y + dy)
+                if next_node is None:
+                    continue
+
+                # 8-connected, yes, but we consider diagonal movements to be more expensive
+                # half of the cost comes the current node, the other half from the next
+                # (assuming center-to-center movement)
+                dg = (
+                    (dx**2 + dy**2) ** 0.5
+                    * (next_node.dg + node_to_explore.dg)
+                    * 0.5
+                )
+                g = node_to_explore.g + dg
+
+                # Already had a better path to reach this node
+                if next_node.g <= g:
+                    continue
+
+                next_node.g = g
+                next_node.parent = node_to_explore
+                h = self.h(next_node.x, next_node.y, xf, yf)
+                next_node.h = h
+                heapq.heappush(heap, next_node)
+
+        warning(f"Could not find a path after {max_iter} iterations")
+        return []
+
+    def reset_nodes(self):
+        for n in self._nodes:
+            n.g = inf
+            n.parent = None
+
+    def collect_path(self, n: AstarNode) -> List[AstarNode]:
+        path = [n]
+        while path[-1].parent is not None:
+            path.append(path[-1].parent)
+        path.reverse()
+        return path
+
 
 if __name__ == "__main__":
     from collections import defaultdict
