@@ -1,10 +1,9 @@
 import argparse
-import cProfile
 import itertools
 import logging
 import time
 from collections import defaultdict
-from math import cos, inf
+from math import inf
 from os import environ
 
 import numpy as np
