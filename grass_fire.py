@@ -1,11 +1,10 @@
 from math import inf
-from typing import Optional, List
+from typing import List
 from graph import Graph, Node
 
 
 class GrassFireNode(Node):
     def __init__(self, x: int, y: int, cost_to_go: float) -> None:
-        self.cost: Optional[float] = None
         self.cost_to_go = cost_to_go
         self.x = x
         self.y = y
@@ -22,10 +21,6 @@ class GrassFireGraph(Graph[GrassFireNode]):
     def compute_path(self, xs: int, ys: int, xf: int, yf: int) -> List[GrassFireNode]:
         self.initialize_costs(xs, ys)
         return self.path_to(xf, yf)
-
-    def reset_costs(self):
-        for n in self._nodes:
-            n.cost = None
 
     ### GrassFire specific
     def neighbors(self, node: GrassFireNode) -> List[GrassFireNode]:
@@ -45,28 +40,31 @@ class GrassFireGraph(Graph[GrassFireNode]):
         ns = self.node(xs, ys)
         ns.cost = 0
         nodes = [ns]
+        i = 0
         while nodes:
+            i += 1
             cur_n = nodes.pop()
-            assert cur_n.cost is not None
+            assert cur_n.cost is not inf
             neighbors = self.neighbors(cur_n)
             to_add = []
             for next_n in neighbors:
                 new_cost = cur_n.cost + next_n.cost_to_go
-                if next_n.cost is not None and next_n.cost < new_cost:
+                if next_n.cost <= new_cost:
                     continue
                 next_n.cost = new_cost
                 to_add.append(next_n)
             nodes += to_add
+            nodes.sort(key=lambda n: -n.cost)
 
     def path_to(self, xf: int, yf: int) -> List[GrassFireNode]:
         nf = self.node(xf, yf)
-        if nf.cost is None:
+        if nf.cost is inf:
             return []
 
         path = [nf]
         while path[-1].cost != 0:
             neighbors = self.neighbors(path[-1])
-            valid_neighbors = [n for n in neighbors if n.cost is not None]
+            valid_neighbors = [n for n in neighbors if n.cost is not inf]
             valid_neighbors.sort(key=lambda node: node.cost)  # type: ignore
             path.append(valid_neighbors[0])
         path.reverse()
@@ -74,11 +72,15 @@ class GrassFireGraph(Graph[GrassFireNode]):
 
     def total_cost_str(self) -> str:
         return self._generic_str(
-            5, lambda node: node.cost if node.cost is not None else "?"
+            5, lambda node: node.cost if node.cost is not inf else "?"
         )
 
+    def reset_costs(self):
+        for n in self._nodes:
+            n.cost = inf
 
-if __name__ == "__main__":
+
+def main():
     from collections import defaultdict
 
     # nodes will, by default, have a cost-to-go of 1
@@ -106,3 +108,7 @@ if __name__ == "__main__":
     path = g.path_to(xf, yf)
     print(f"Path from initial point ({xs}, {ys}) to goal point ({xf}, {yf})")
     print(g.path_str(path))
+
+
+if __name__ == "__main__":
+    main()

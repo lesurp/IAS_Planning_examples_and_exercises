@@ -8,6 +8,7 @@ class Node(ABC):
         self.x = x
         self.y = y
         self.cost_to_go = cost_to_go
+        self.cost = inf
 
 
 NodeImpl = TypeVar("NodeImpl", bound=Node)
@@ -24,6 +25,14 @@ class Graph(ABC, Generic[NodeImpl]):
         pass
 
     # Helper functions
+    @property
+    def max_x(self):
+        return self._max_x
+
+    @property
+    def max_y(self):
+        return self._max_y
+
     def is_in(self, x: int, y: int) -> bool:
         return 0 <= x < self._max_x and 0 <= y < self._max_y
 

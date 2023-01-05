@@ -10,17 +10,12 @@ import heapq
 class AstarNode(Node):
     def __init__(self, x: int, y: int, cost_to_go: float) -> None:
         super().__init__(x, y, cost_to_go)
-        self.g = inf
         self.h = 0.0
         self.parent: Optional[AstarNode] = None
 
     @property
     def f(self):
-        return self.h + self.g
-
-    @property
-    def dg(self):
-        return self.cost_to_go
+        return self.h + self.cost
 
     def __lt__(self, other):
         # If the f values are equal, then we take the 'closest' one (with the smallest heuristic)
@@ -66,7 +61,7 @@ class AstarGraph(Graph[AstarNode]):
         # In python 3, there is no heap per se, but one can use a normal list
         # and then use the functions defined in the heapq package to maintain the heap invariants
         start = self.node(xs, ys)
-        start.g = 0
+        start.cost = 0
         start.h = self.h(
             xs, ys, xf, yf
         )  # actually useless because the value is never read
@@ -109,16 +104,16 @@ class AstarGraph(Graph[AstarNode]):
                 # (assuming center-to-center movement)
                 dg = (
                     (dx**2 + dy**2) ** 0.5
-                    * (next_node.dg + node_to_explore.dg)
+                    * (next_node.cost_to_go + node_to_explore.cost_to_go)
                     * 0.5
                 )
-                g = node_to_explore.g + dg
+                g = node_to_explore.cost + dg
 
                 # Already had a better path to reach this node
-                if next_node.g <= g:
+                if next_node.cost <= g:
                     continue
 
-                next_node.g = g
+                next_node.cost = g
                 next_node.parent = node_to_explore
                 h = self.h(next_node.x, next_node.y, xf, yf)
                 next_node.h = h
@@ -129,7 +124,7 @@ class AstarGraph(Graph[AstarNode]):
 
     def reset_nodes(self):
         for n in self._nodes:
-            n.g = inf
+            n.cost = inf
             n.parent = None
 
     def collect_path(self, n: AstarNode) -> List[AstarNode]:
