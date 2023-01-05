@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from common import run_graph_search, Renderer, cost_map_from_args
+from common import render_graph, run_graph_search
 from astar import (
     AstarGraph,
     Norm1AstarHeuristic,
@@ -48,9 +48,7 @@ algo_facto = {
 def run_from_cli():
     args = parse_args(algo_facto.keys())
     if args.algo_name == "show_path":
-        grid_size = args.grid_size
-        cost_map = cost_map_from_args(args)
-        Renderer(grid_size, grid_size).show_path("show_path", [], cost_map)
+        render_graph(args)
     else:
         ctor = algo_facto[args.algo_name]
         run_graph_search(ctor, args)
